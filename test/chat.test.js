@@ -2,7 +2,8 @@ const assert = require('node:assert/strict');
 const { io } = require('socket.io-client');
 const { server } = require('../server');
 
-let url;
+let url = process.env.TEST_URL;
+let startedLocalServer = false;
 const connect = () => new Promise((resolve, reject) => {
   const socket = io(url, { reconnection: false });
   socket.once('connect', () => resolve(socket));
@@ -12,8 +13,11 @@ const emit = (socket, event, data) => new Promise(resolve => socket.emit(event, 
 const once = (socket, event) => new Promise(resolve => socket.once(event, resolve));
 
 (async () => {
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  url = `http://127.0.0.1:${server.address().port}`;
+  if (!url) {
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    url = `http://127.0.0.1:${server.address().port}`;
+    startedLocalServer = true;
+  }
   const alice = await connect();
   const bob = await connect();
   const eve = await connect();
@@ -40,7 +44,7 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     console.log('PASS password, messaging, image, reporting, rate-limit and rejoin checks');
   } finally {
     alice.disconnect(); bob.disconnect(); eve.disconnect();
-    await new Promise(resolve => server.close(resolve));
+    if (startedLocalServer) await new Promise(resolve => server.close(resolve));
   }
 })().catch(error => {
   console.error(error);
