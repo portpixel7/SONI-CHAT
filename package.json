@@ -1,0 +1,22 @@
+{
+  "name": "soni-temporary-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Temporary real-time web chat rooms",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test/chat.test.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

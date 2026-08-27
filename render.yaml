@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: soni-chat
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: MAX_ROOM_MEMBERS
+        value: 50
