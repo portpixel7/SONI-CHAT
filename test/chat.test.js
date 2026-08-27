@@ -29,6 +29,9 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     assert.equal((await emit(alice, 'chat-message', { text: 'hello' })).ok, true);
     const textMessage = await receivedText;
     assert.equal(textMessage.text, 'hello');
+    const seenReceipt = once(alice, 'message-seen');
+    bob.emit('message-seen', { messageId: textMessage.messageId });
+    assert.equal((await seenReceipt).messageId, textMessage.messageId);
     assert.equal((await emit(bob, 'report-message', { messageId: textMessage.messageId })).ok, true);
     const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     const receivedImage = once(bob, 'image-message');
@@ -41,7 +44,7 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     const reconnectedAlice = await connect();
     assert.equal((await emit(reconnectedAlice, 'join-room', { user: 'Alice', room: '8800', password: 'secret' })).ok, true);
     reconnectedAlice.disconnect();
-    console.log('PASS password, messaging, image, reporting, rate-limit and rejoin checks');
+    console.log('PASS password, messaging, seen, image, reporting, rate-limit and rejoin checks');
   } finally {
     alice.disconnect(); bob.disconnect(); eve.disconnect();
     if (startedLocalServer) await new Promise(resolve => server.close(resolve));

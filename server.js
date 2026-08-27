@@ -151,6 +151,13 @@ io.on('connection', socket => {
     done({ ok: true });
   });
 
+  socket.on('message-seen', data => {
+    const viewer = users.get(socket.id);
+    const message = recentMessages.get(String(data?.messageId || ''));
+    if (!viewer || !message || message.room !== viewer.room || message.id === socket.id) return;
+    io.to(message.id).emit('message-seen', { messageId: message.messageId });
+  });
+
   socket.on('typing', active => {
     const current = users.get(socket.id);
     if (!current) return;
