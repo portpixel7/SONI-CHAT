@@ -41,6 +41,12 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     assert.equal((await emit(alice, 'image-message', { image: imageOverOldLimit })).ok, true, 'images over 500 KB should be accepted');
     const imageOverNewLimit = `data:image/png;base64,${Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64')}`;
     assert.equal((await emit(alice, 'image-message', { image: imageOverNewLimit })).ok, false, 'images over 5 MB should be rejected');
+    const whatsappAudio = `data:audio/ogg;base64,${Buffer.alloc(1_000).toString('base64')}`;
+    const receivedAudio = once(bob, 'audio-message');
+    assert.equal((await emit(alice, 'audio-message', { audio: whatsappAudio })).ok, true);
+    assert.equal((await receivedAudio).audio, whatsappAudio);
+    const oversizedAudio = `data:audio/ogg;base64,${Buffer.alloc(10 * 1024 * 1024 + 1).toString('base64')}`;
+    assert.equal((await emit(alice, 'audio-message', { audio: oversizedAudio })).ok, false, 'audio over 10 MB should be rejected');
     const incomingCall = once(bob, 'call-incoming');
     assert.equal((await emit(alice, 'call-user', { target: bob.id })).ok, true);
     assert.equal((await incomingCall).user, 'Alice');
@@ -55,7 +61,7 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     const reconnectedAlice = await connect();
     assert.equal((await emit(reconnectedAlice, 'join-room', { user: 'Alice', room: '8800', password: 'secret' })).ok, true);
     reconnectedAlice.disconnect();
-    console.log('PASS password, messaging, seen, image, voice-call signaling, reporting, rate-limit and rejoin checks');
+    console.log('PASS password, messaging, seen, image, audio, voice-call signaling, reporting, rate-limit and rejoin checks');
   } finally {
     alice.disconnect(); bob.disconnect(); eve.disconnect();
     if (startedLocalServer) await new Promise(resolve => server.close(resolve));

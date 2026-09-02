@@ -23,6 +23,7 @@ Open `http://localhost:3000`. Run the self-contained integration checks with `np
 
 Images up to 5 MB can be sent in PNG, JPEG, WebP, or GIF format.
 Room members can make one-to-one peer-to-peer voice calls after granting browser microphone permission.
+Downloaded or shared WhatsApp audio files can be sent as playable chat messages up to 10 MB.
 
 Read reports with `GET /api/reports` and clear reviewed reports with `DELETE /api/reports`, using `Authorization: Bearer <ADMIN_TOKEN>`.
 

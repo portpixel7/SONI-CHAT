@@ -19,9 +19,10 @@ function allowSocketRequest(req, callback) {
 const app = express();
 const server = http.createServer(app);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 // Base64 adds roughly 33% to the original file size, so leave enough room for
 // the encoded image and the surrounding Socket.IO payload.
-const io = new Server(server, { maxHttpBufferSize: 8 * 1024 * 1024, allowRequest: allowSocketRequest });
+const io = new Server(server, { maxHttpBufferSize: 16 * 1024 * 1024, allowRequest: allowSocketRequest });
 const users = new Map();
 const rooms = new Map();
 const typing = new Map();
@@ -37,7 +38,7 @@ app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
@@ -140,6 +141,20 @@ io.on('connection', socket => {
     recentMessages.set(message.messageId, { messageId: message.messageId, id: message.id, user: message.user, room: current.room, type: 'image', time: message.time });
     if (recentMessages.size > 2000) recentMessages.delete(recentMessages.keys().next().value);
     io.to(current.room).emit('image-message', message);
+    done({ ok: true });
+  });
+
+  socket.on('audio-message', (data, done = () => {}) => {
+    const current = users.get(socket.id);
+    const audio = String(data?.audio || '');
+    const match = audio.match(/^data:(audio\/(?:mpeg|mp4|ogg|webm|wav|x-wav|aac|opus));base64,([A-Za-z0-9+/=]+)$/);
+    if (!current || !match) return done({ ok: false, error: 'Unsupported audio file.' });
+    if (Buffer.byteLength(match[2], 'base64') > MAX_AUDIO_BYTES) return done({ ok: false, error: 'Audio must be 10 MB or smaller.' });
+    if (!allowedToSend(socket.id)) return done({ ok: false, error: 'Slow down—please wait a few seconds.' });
+    const message = { messageId: crypto.randomUUID(), id: socket.id, user: current.user, audio, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    recentMessages.set(message.messageId, { messageId: message.messageId, id: message.id, user: message.user, room: current.room, type: 'audio', time: message.time });
+    if (recentMessages.size > 2000) recentMessages.delete(recentMessages.keys().next().value);
+    io.to(current.room).emit('audio-message', message);
     done({ ok: true });
   });
 
