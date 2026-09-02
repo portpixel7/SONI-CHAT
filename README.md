@@ -21,6 +21,8 @@ Open `http://localhost:3000`. Run the self-contained integration checks with `np
 - `ALLOWED_ORIGINS`: optional comma-separated list of permitted browser origins. When omitted, only the request host is accepted.
 - `MAX_ROOM_MEMBERS`: maximum concurrent members per room; defaults to 50.
 
+Images up to 5 MB can be sent in PNG, JPEG, WebP, or GIF format.
+
 Read reports with `GET /api/reports` and clear reviewed reports with `DELETE /api/reports`, using `Authorization: Bearer <ADMIN_TOKEN>`.
 
 All application state is kept in memory and is lost on restart. Deploy one server instance only. Horizontal scaling requires a shared Socket.IO adapter and shared state store.

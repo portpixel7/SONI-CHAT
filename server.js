@@ -18,7 +18,10 @@ function allowSocketRequest(req, callback) {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 750_000, allowRequest: allowSocketRequest });
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Base64 adds roughly 33% to the original file size, so leave enough room for
+// the encoded image and the surrounding Socket.IO payload.
+const io = new Server(server, { maxHttpBufferSize: 8 * 1024 * 1024, allowRequest: allowSocketRequest });
 const users = new Map();
 const rooms = new Map();
 const typing = new Map();
@@ -131,7 +134,7 @@ io.on('connection', socket => {
     const image = String(data?.image || '');
     const match = image.match(/^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
     if (!current || !match) return done({ ok: false, error: 'Unsupported image.' });
-    if (Buffer.byteLength(match[2], 'base64') > 500_000) return done({ ok: false, error: 'Image must be smaller than 500 KB.' });
+    if (Buffer.byteLength(match[2], 'base64') > MAX_IMAGE_BYTES) return done({ ok: false, error: 'Image must be 5 MB or smaller.' });
     if (!allowedToSend(socket.id)) return done({ ok: false, error: 'Slow down—please wait a few seconds.' });
     const message = { messageId: crypto.randomUUID(), id: socket.id, user: current.user, image, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
     recentMessages.set(message.messageId, { messageId: message.messageId, id: message.id, user: message.user, room: current.room, type: 'image', time: message.time });

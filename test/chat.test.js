@@ -37,6 +37,10 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     const receivedImage = once(bob, 'image-message');
     assert.equal((await emit(alice, 'image-message', { image: tinyPng })).ok, true);
     assert.equal((await receivedImage).image, tinyPng);
+    const imageOverOldLimit = `data:image/png;base64,${Buffer.alloc(600_000).toString('base64')}`;
+    assert.equal((await emit(alice, 'image-message', { image: imageOverOldLimit })).ok, true, 'images over 500 KB should be accepted');
+    const imageOverNewLimit = `data:image/png;base64,${Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64')}`;
+    assert.equal((await emit(alice, 'image-message', { image: imageOverNewLimit })).ok, false, 'images over 5 MB should be rejected');
     const spamResults = [];
     for (let index = 0; index < 10; index += 1) spamResults.push(await emit(alice, 'chat-message', { text: `spam-${index}` }));
     assert.ok(spamResults.some(result => !result.ok), 'rate limit should reject rapid messages');
