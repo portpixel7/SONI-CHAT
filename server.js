@@ -36,7 +36,7 @@ app.disable('x-powered-by');
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -169,6 +169,19 @@ io.on('connection', socket => {
     active ? roomTyping.set(socket.id, current.user) : roomTyping.delete(socket.id);
     updateTyping(current.room);
   });
+
+  const relayToRoomMember = (event, data, done = () => {}) => {
+    const current = users.get(socket.id);
+    const target = String(data?.target || '');
+    const recipient = users.get(target);
+    if (!current || !recipient || recipient.room !== current.room || target === socket.id) return done({ ok: false, error: 'That member is no longer available.' });
+    io.to(target).emit(event, { from: socket.id, user: current.user, ...(data?.signal ? { signal: data.signal } : {}), ...(typeof data?.accepted === 'boolean' ? { accepted: data.accepted } : {}) });
+    done({ ok: true });
+  };
+  socket.on('call-user', (data, done) => relayToRoomMember('call-incoming', data, done));
+  socket.on('call-response', (data, done) => relayToRoomMember('call-response', data, done));
+  socket.on('webrtc-signal', (data, done) => relayToRoomMember('webrtc-signal', data, done));
+  socket.on('call-end', (data, done) => relayToRoomMember('call-end', data, done));
 
   socket.on('leave-room', () => leaveCurrentRoom(socket));
   socket.on('disconnect', () => {

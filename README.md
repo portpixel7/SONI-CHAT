@@ -22,6 +22,7 @@ Open `http://localhost:3000`. Run the self-contained integration checks with `np
 - `MAX_ROOM_MEMBERS`: maximum concurrent members per room; defaults to 50.
 
 Images up to 5 MB can be sent in PNG, JPEG, WebP, or GIF format.
+Room members can make one-to-one peer-to-peer voice calls after granting browser microphone permission.
 
 Read reports with `GET /api/reports` and clear reviewed reports with `DELETE /api/reports`, using `Authorization: Bearer <ADMIN_TOKEN>`.
 

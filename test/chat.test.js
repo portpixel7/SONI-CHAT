@@ -41,6 +41,13 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     assert.equal((await emit(alice, 'image-message', { image: imageOverOldLimit })).ok, true, 'images over 500 KB should be accepted');
     const imageOverNewLimit = `data:image/png;base64,${Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64')}`;
     assert.equal((await emit(alice, 'image-message', { image: imageOverNewLimit })).ok, false, 'images over 5 MB should be rejected');
+    const incomingCall = once(bob, 'call-incoming');
+    assert.equal((await emit(alice, 'call-user', { target: bob.id })).ok, true);
+    assert.equal((await incomingCall).user, 'Alice');
+    const relayedSignal = once(bob, 'webrtc-signal');
+    assert.equal((await emit(alice, 'webrtc-signal', { target: bob.id, signal: { description: { type: 'offer', sdp: 'test' } } })).ok, true);
+    assert.equal((await relayedSignal).signal.description.type, 'offer');
+    assert.equal((await emit(eve, 'call-user', { target: bob.id })).ok, false, 'calls cannot cross rooms');
     const spamResults = [];
     for (let index = 0; index < 10; index += 1) spamResults.push(await emit(alice, 'chat-message', { text: `spam-${index}` }));
     assert.ok(spamResults.some(result => !result.ok), 'rate limit should reject rapid messages');
@@ -48,7 +55,7 @@ const once = (socket, event) => new Promise(resolve => socket.once(event, resolv
     const reconnectedAlice = await connect();
     assert.equal((await emit(reconnectedAlice, 'join-room', { user: 'Alice', room: '8800', password: 'secret' })).ok, true);
     reconnectedAlice.disconnect();
-    console.log('PASS password, messaging, seen, image, reporting, rate-limit and rejoin checks');
+    console.log('PASS password, messaging, seen, image, voice-call signaling, reporting, rate-limit and rejoin checks');
   } finally {
     alice.disconnect(); bob.disconnect(); eve.disconnect();
     if (startedLocalServer) await new Promise(resolve => server.close(resolve));
